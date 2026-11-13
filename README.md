@@ -1,142 +1,114 @@
 # DataMap Studio
 
-A local Excel data intelligence application with independent feature modules.
-The first complete module maps approved account roles per market from FDS / SSO-EIP
-workbooks. It produces an auditable, seven-sheet Excel report.
+**A standalone Windows application for Excel mapping and auditable market reports.**
 
-## Start on this Windows computer
+## Run the application
 
-The application has been built in this checkout. Double-click **Start.cmd**.
-Keep the console window open while using the application. It opens
-**http://127.0.0.1:8000** in your browser. Close it or press Ctrl+C to stop.
+1. Download **DataMapStudio-Windows-x64** from a successful [Windows desktop build](https://github.com/AydheDev/Project-DataMap-Studio/actions/workflows/windows-desktop.yml).
+2. Extract the ZIP into a local folder.
+3. Double-click **DataMapStudio.exe**.
 
-For a fresh checkout, install **Python 3.14** and **Node.js 22.12+** with npm on PATH,
-then double-click **Setup.cmd** once. Setup installs Python dependencies into
-`.venv`, installs the locked frontend dependencies through pnpm, and builds the UI.
-Then use **Start.cmd**.
-
-The installed application works fully offline. Files, calculations, templates and history stay
-on this computer. The browser communicates only with the local processor at 127.0.0.1;
-there are no internet/LAN services, CDN assets, accounts, analytics or update checks.
-Runtime guards block non-loopback Python socket connections and DNS, and the built UI
-restricts connections and assets to its own local origin. API documentation is also local.
-
-Only first-time developer setup downloads dependencies. Start.cmd never downloads or installs anything.
+No Python, Node.js, browser, web server, localhost connection or internet connection is needed.
+The executable bundles the processing engine and native Qt interface.
+The application does not have telemetry, cloud storage, sign-in or automatic updates.
+Keep the included user guide and third-party licence notices with the distribution.
 
 ## First workflow
 
 1. Open **Data Import**.
-2. Upload `examples/sample-source.xlsx` and `examples/sample-approved-roles.xlsx`.
+2. Open `examples/sample-source.xlsx` and `examples/sample-approved-roles.xlsx`.
 3. Choose **Current Period**, header row **2**, and **Approved Roles**, header row **1**.
-4. Review the detected columns. In particular, use **Salesforce Last login**, never Fed ID.
-5. Continue to **Review & process**, then **Generate report**.
-6. Explore **Reports** and **Data Quality**, or download the formatted Excel workbook.
+4. Review all column mappings. Eligibility uses **Salesforce Last login**, never Fed ID.
+5. Open **Account Role Mapping**, review the rules, and select **Generate report**.
+6. Explore **Reports** / **Data Quality**, then select **Save Excel report**.
 
 Expected sample result: **16 source rows → 5 eligible rows → 4 unique mappings**,
-with **1 duplicate removed**. There are two distinct accounts across all markets.
-See [sample expectations](examples/EXPECTED_RESULTS.md).
+with **1 duplicate removed**. See [sample expectations](examples/EXPECTED_RESULTS.md).
 
-The supplied workbooks contain synthetic examples only. Production FDS/SSO-EIP
-workbooks were not provided and have not been validated in this checkout.
+Samples are synthetic; production business workbooks were not supplied for validation.
 
-## What is included
+## Features
 
-- React + TypeScript + Vite + Tailwind, with Radix accessible report tabs and shared UI components.
-- FastAPI application with a trusted module registry and bounded background job queue.
-- Streaming XLSX reading, XLS support, sheet/header selection, data preview and manual column mapping.
-- Approved-role matching, email fallback, login validation, composite-key deduplication and accurate unique counts.
-- Atomic, formula-safe Excel export with all seven requested report worksheets.
-- SQLite processing history, reusable mapping templates and defaults.
-- Search, market/role filters, sorting, pagination, and report downloads.
-- Backend unit/integration tests, frontend interaction tests, and full browser workflow tests.
-- Windows launchers and cross-platform CLI instructions.
+- Native Windows window, file dialogs, drag-and-drop input and report tables.
+- XLSX/XLS import, worksheet/header selection, preview and manual column mappings.
+- Approved-role matching, login validation, normalized email fallback and composite-key deduplication.
+- Accurate market summaries and role counts, with optional zero counts.
+- Seven formatted, auditable Excel worksheets.
+- Reusable templates, processing history, configuration and report search/filter/sort.
+- Background imports and processing so the interface remains responsive.
+- Local SQLite/filesystem storage under `%LOCALAPPDATA%\DataMapStudio`.
+- One instance per data folder, protected originals and atomic report generation.
+- No IP sockets, including localhost, in the native runtime.
 
-## Local development
+The first active module is Account Role Mapping per Market.
+Other modules can use the existing trusted module registry and processing contract.
 
-Windows PowerShell:
+## Data and backups
+
+Files, reports, templates and history stay on this computer.
+Close the app and copy the entire `%LOCALAPPDATA%\DataMapStudio` folder to back it up.
+Use `DataMapStudio.exe --storage C:\path\to\local-folder` to select another local data directory.
+Network shares and mapped network drives are unsupported.
+
+Existing files from the earlier web prototype remain untouched. To use an existing
+storage directory with the desktop app, close the old server first and pass that
+directory with `--storage`. Both interfaces use the same SQLite and file layout.
+
+## Developer setup and packaging
+
+End users only need the packaged executable. Developers need Python 3.14 on Windows:
 
 ```powershell
 python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r desktop/requirements.txt
+.\.venv\Scripts\python.exe desktop/launch.py
+.\.venv\Scripts\python.exe scripts/build_desktop.py
+```
+
+The executable is written to `dist/DataMapStudio.exe`.
+`Setup.cmd` installs the desktop dependencies and builds it.
+`Start.cmd` opens the packaged executable if present, otherwise the native Python interface.
+Developer setup downloads build dependencies; the installed application never does.
+
+For the original backend regression tests:
+
+```powershell
 .\.venv\Scripts\python.exe -m pip install -r backend/requirements-lock.txt
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload --no-access-log
-```
-
-In another terminal:
-
-```powershell
-cd frontend
-npx --yes --package=pnpm@11.25.0 pnpm install --frozen-lockfile
-npx --yes --package=pnpm@11.25.0 pnpm dev
-```
-
-Open http://127.0.0.1:5173. Vite proxies `/api` to the local backend.
-If pnpm is installed, `pnpm install --frozen-lockfile` and `pnpm dev` are equivalent.
-
-Linux/macOS: use `python3.14 -m venv .venv` and `.venv/bin/python` in place of the Windows interpreter path.
-Use Node.js 22.12+ and pnpm 11.25.0. The same FastAPI/Vite commands apply.
-
-## Production build for local use
-
-```powershell
-cd frontend
-npx --yes --package=pnpm@11.25.0 pnpm build
-cd ..
-.\.venv\Scripts\python.exe scripts/run_local.py
-```
-
-The backend serves `frontend/dist` and the API from one loopback port.
-Node is only needed to build, not to run the built application.
-Use `--port 8001` or `--no-browser` with `run_local.py` if needed.
-API reference: http://127.0.0.1:8000/docs.
-
-This is a **single-user, offline application**. LAN and internet hosting are outside its scope.
-The runtime rejects listening on non-loopback interfaces. See [local deployment notes](docs/DEPLOYMENT.md).
-
-## Verification
-
-```powershell
 .\.venv\Scripts\python.exe scripts/verify.py
-cd frontend
-npx --yes --package=pnpm@11.25.0 pnpm test
-npx --yes --package=pnpm@11.25.0 pnpm build
-npx --yes --package=pnpm@11.25.0 pnpm exec playwright install chromium
-npx --yes --package=pnpm@11.25.0 pnpm test:e2e
 ```
 
-The browser suite starts its own backend using `storage/e2e`. Stop an existing
-port-8000 server first to keep browser-test records separate from normal work.
-To use an installed browser instead of downloading Chromium, set
-`BROWSER_EXECUTABLE` to its absolute executable path.
+For the actual native-window workflow and packaged smoke test:
 
-## Project map
-
-```text
-backend/app/
-  api/                         Request schemas
-  core/                        Module contracts, registry, jobs, safe logging
-  services/                    Excel import/export and normalization
-  repositories/                SQLite persistence
-  modules/account_role_mapping/ Business rules and module metadata
-  modules/sample/              Disabled developer example
-frontend/src/
-  components/                  Shared UI and report tables
-  layouts/                     Application shell
-  pages/                       Dashboard, reports, history, modules, settings
-  features/account-role-mapping/ Workbook mapping and rule configuration
-  services/                    Typed API access and formatting
-  types/                       Frontend contracts
-tests/                         Backend unit and workflow tests
-frontend/e2e/                  Browser workflow tests
-examples/                      Synthetic XLS/XLSX workbooks and expected results
-scripts/                       Setup, launch, verification, sample generation
-docs/                          Architecture, module guide, user guide, deployment
-storage/                       Runtime files and SQLite (ignored by Git)
+```powershell
+.\.venv\Scripts\python.exe desktop/launch.py --self-test build/source-test
+.\dist\DataMapStudio.exe --self-test build/packaged-test
 ```
+
+The self-test uses the synthetic examples and an isolated data directory.
+It exercises the actual native window, imports, mappings, templates, processing,
+filtering, export, settings and the no-network guard.
+GitHub Actions performs these checks on Windows and publishes the executable artifact.
+
+## Project layout
+
+| Location | Purpose |
+| --- | --- |
+| desktop/ | Native Qt interface, direct workflow adapter, no-network guard and entry point |
+| backend/app/core/ | Shared module contracts and background jobs |
+| backend/app/modules/ | Account Role Mapping and disabled sample extension |
+| backend/app/services/ | Excel import/export and normalization |
+| backend/app/repositories/ | SQLite persistence |
+| scripts/build_desktop.py | Windows executable packaging |
+| examples/ | Synthetic workbooks and expected results |
+| tests/ | Processing/API regression tests |
+| .github/workflows/windows-desktop.yml | Native Windows build and executable verification |
+| frontend/ and backend/app/main.py | Earlier browser prototype, retained for development reference; not bundled or started by the desktop app |
 
 ## Guides
 
-- [Architecture and design decisions](docs/ARCHITECTURE.md)
-- [Add a feature module](docs/MODULES.md)
-- [User guide and business-rule definitions](docs/USER_GUIDE.md)
-- [Deployment, limits and data handling](docs/DEPLOYMENT.md)
+- [Desktop user guide](desktop/USER_GUIDE.md)
+- [Business rules and report definitions](docs/USER_GUIDE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Adding modules](docs/MODULES.md)
+- [Desktop packaging and data handling](docs/DEPLOYMENT.md)
 - [Verification record](docs/VERIFICATION.md)

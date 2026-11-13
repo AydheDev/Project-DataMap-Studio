@@ -1,5 +1,23 @@
 # Architecture
 
+## Current primary interface: standalone desktop
+
+The user-facing application is now a native PySide6/Qt Widgets window. `desktop/launch.py`
+opens the window and `desktop/workspace.py` calls the existing job engine directly.
+There is no browser, WebView, HTTP transport, localhost listener or Node runtime.
+PyInstaller bundles Python, Qt and the processing dependencies into DataMapStudio.exe.
+The following web-adapter descriptions document the preserved earlier implementation;
+it is not bundled or started by the native launcher.
+
+Native file imports and report loading run on a bounded QThreadPool. The existing
+JobManager handles processing. Qt signals marshal task results back to the UI thread.
+A QTimer reads local SQLite job state; it does not poll a server. Native file dialogs
+select local workbooks and export destinations. Report filtering, sorting and pagination
+operate on local result data. The default data folder is %LOCALAPPDATA%\\DataMapStudio.
+A QLockFile prevents duplicate instances from owning the same desktop workspace.
+The native runtime rejects all IP socket creation and hostname resolution.
+
+
 ## Implementation plan and completed phases
 
 1. **Foundation:** application layout, shared interfaces, module registry, local persistence.

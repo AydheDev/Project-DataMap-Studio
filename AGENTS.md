@@ -15,5 +15,6 @@
 - Local-only deployment is the default. Do not publish or expose the app publicly without an explicit request.
 
 - The application must operate fully offline. No internet/LAN calls, CDN assets, telemetry or automatic update checks.
-- Preserve the loopback-only runtime guard, same-origin browser policy and self-contained API docs.
-- The local browser UI may communicate with its local Python processor over 127.0.0.1 only.
+- The primary application is the native Windows desktop executable. No browser, web server, HTTP transport or localhost sockets may be used by it.
+- Preserve the desktop no-network guard. The older web prototype stays separate and must not be bundled or started by the desktop launcher.
+- Verify native changes using desktop/launch.py --self-test and repeat that workflow from the packaged executable.

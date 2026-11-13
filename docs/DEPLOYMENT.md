@@ -1,80 +1,52 @@
-# Deployment and data handling
+# Standalone desktop deployment
 
-## Local runtime
+The supported user-facing distribution is **DataMapStudio.exe** for Windows x64.
+It is a native PySide6/Qt Widgets application with the Python runtime and processing
+dependencies bundled by PyInstaller. It does not use a browser, WebView, web server,
+HTTP client, localhost transport, or Node runtime.
 
-The supported initial deployment is one FastAPI process on 127.0.0.1.
-Run `scripts/run_local.py` after building the frontend. It serves the built UI
-and the API from the same origin, and disables access logging by default.
-The app also strips query strings from Uvicorn access logs if logging is enabled.
+Download the Windows build artifact, extract it and run the executable.
+No administrator rights or global Python installation are required for normal use.
+The first launch may take a few seconds while the one-file package extracts its runtime.
 
-Tested here: Windows, Python 3.14.8, Node 24.22.1, pnpm 11.25.0 and Chrome.
-Dependency versions are recorded in backend/requirements-lock.txt and frontend/pnpm-lock.yaml.
-Setup.ps1 is the Windows bootstrap; a clean-machine installation was not exercised.
-Other OS instructions are provided but were not executed in this Windows environment.
+## Local data
 
-Runtime data defaults to repository-root `storage/`:
-- `uploads/`: immutable original workbook bytes.
-- `outputs/`: completed XLSX and report-table JSON files.
-- `temp/`: partial uploads.
-- `datamap.sqlite3`: metadata, job history, templates and defaults.
+The default data directory is `%LOCALAPPDATA%\DataMapStudio`.
+It contains immutable imported copies, report files, SQLite history, templates and settings.
+Use `--storage <local-directory>` for another location. Close the application before
+backing up or moving that directory. The packaged executable and data are separate;
+replacing the executable does not delete the saved workspace.
 
-Set the absolute `DATAMAP_STORAGE` environment variable before launch to use a different
-directory. Keep this directory on a trusted local disk with appropriate OS account access.
-The application does not encrypt files at rest or implement multiple user accounts.
+QLockFile prevents two native instances from using the same data directory concurrently.
+Do not open the same directory simultaneously with the earlier web prototype.
 
-## Limits
+Imports are capped at 30 MB. Worksheet limits remain 200,000 rows, 256 columns and
+2,000,000 data cells. XLSX expanded size is limited to 200 MB.
+Excel formulas are not evaluated; saved cached values are used where available.
 
-| Resource | Limit |
-| --- | ---: |
-| Uploaded workbook | 30 MB |
-| Expanded XLSX archive | 200 MB |
-| XLSX archive entries | 10,000 |
-| Rows in one selected sheet | 200,000 data rows |
-| Columns in one selected sheet | 256 |
-| Selected-sheet data cells | 2,000,000 |
-| Header row | 1–100 |
-| Automatic header search | First 30 rows |
-| Preview rows | 20 |
-| Zero-count market/role combinations | 500,000 |
-| Concurrent running jobs | 2 |
-| Running + queued jobs | 4 |
-| Report API page | 200 rows maximum |
+## No-network runtime
 
-XLSX reading and export stream where practical. Pandas aggregation uses an in-memory,
-bounded selected-sheet representation. Report-table JSON is also materialized when
-browsing results. These limits target internal desktop workflows, not very large
-data lakes. Actual throughput depends on workbook complexity and available memory.
+The native interface invokes the shared processing engine through Python function calls.
+The desktop entry point installs a guard that rejects IPv4/IPv6 socket creation and DNS.
+It does not reserve or listen on any port, including localhost.
+Network shares and mapped network drives are not supported.
+There are no accounts, online dependencies, external assets, telemetry or automatic updates.
 
-## Data lifecycle
+This is an application-level guard, not an OS sandbox for hostile native extensions.
+Only trusted feature modules are supported. The guard does not alter the computer's
+network settings or other applications.
 
-Data is retained until the operator deliberately removes the project storage.
-There is no automatic deletion of source workbooks, completed reports or history.
-Startup cleans only partial `*.tmp` files in the owned temp/output directories.
-Do not remove originals or SQLite rows independently while jobs are running.
+## Packaging and verification
 
-For backup, stop the app and copy the entire storage directory. Keep the SQLite
-database and files together. Restore the directory as a unit.
-Source code, examples, lock files and docs are tracked in Git; storage, logs,
-virtual environments and built frontend output are ignored.
+The Windows workflow installs build dependencies, runs the existing processing tests,
+runs the native GUI workflow offscreen, builds a one-file executable and runs the same
+workflow from the executable itself. It also produces screenshots and JSON verification
+records as build artifacts.
 
-## Offline-only runtime boundary
+The distribution includes synthetic example workbooks, an offline user guide and
+available third-party licence notices. The executable is not code-signed in this repository.
+A local developer build uses `python scripts/build_desktop.py`.
+Build dependency downloads are separate from runtime behavior.
 
-No LAN or internet service is used by the application. The only HTTP communication is
-between the browser and the processor on this computer's loopback interface.
-The built UI has a same-origin Content Security Policy. Its API client rejects external
-URLs and redirects. The API reference is self-contained HTML and local OpenAPI JSON;
-Swagger/ReDoc CDN pages are disabled.
-
-A Python audit hook rejects non-loopback socket connects, binds, datagram destinations
-and hostname resolution. This applies to the normal launcher and API lifespan startup.
-It is an application guard for standard Python networking, not an OS sandbox for
-malicious native code or subprocesses. Only trusted feature modules are supported.
-No API calls or health checks are made to external services. The launcher waits for the
-local server's in-process readiness flag before opening the browser.
-
-First-time developer setup can download dependencies. Once installed, Start.cmd and
-all processing work without internet. There is no automatic update or telemetry mechanism.
-The guard does not change the user's browser or operating system networking settings.
-
-Public hosting, LAN sharing and multi-user server deployment are not supported.
-Do not run multiple Uvicorn workers against the shared local storage.
+The historical React/FastAPI implementation remains in source control for reference.
+It is excluded from the packaged executable and is not launched by Start.cmd.
