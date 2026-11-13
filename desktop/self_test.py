@@ -14,6 +14,9 @@ def verify(app, window, resources, output):
             time.sleep(.02)
         app.processEvents()
 
+    from PySide6.QtGui import QRawFont
+    font = QRawFont.fromFont(window.font())
+    assert font.isValid() and all(font.supportsCharacter(ord(c)) for c in "DataMap Studio 0123456789"), "UI font glyphs unavailable"
     assert window.stack.count() == 8
     for family in (socket.AF_INET, socket.AF_INET6):
         try:

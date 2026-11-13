@@ -26,6 +26,16 @@ def main():
     app.setApplicationName("DataMap Studio")
     app.setOrganizationName("AydheDev")
     app.setStyle("Fusion")
+    if args.self_test and os.name == "nt":
+        # The offscreen platform has no Windows system-font database.
+        # Load the runner's installed fonts locally for faithful native previews.
+        from PySide6.QtGui import QFont, QFontDatabase
+        fonts = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
+        for filename in ("segoeui.ttf", "segoeuib.ttf", "seguisb.ttf"):
+            path = fonts / filename
+            if path.is_file():
+                QFontDatabase.addApplicationFont(str(path))
+        app.setFont(QFont("Segoe UI", 10))
     resources = Path(getattr(sys, "_MEIPASS", SOURCE_ROOT))
     root = local_path(args.storage) if args.storage else default_storage()
     if args.self_test:
