@@ -96,4 +96,9 @@ Client workbook previews display source data. Audit email redaction applies to
 the Excluded Records sheet and its report API, not the original source preview
 or the required Unique Mapping sheet.
 
-See DEPLOYMENT.md for limits and server-deployment requirements.
+Runtime networking is limited to loopback by a Python socket audit hook. The built browser UI
+uses a same-origin Content Security Policy and refuses cross-origin requests and redirects.
+The API documentation is local HTML; framework-default CDN documentation is disabled.
+The launcher uses an in-process readiness flag, so no HTTP proxy can intercept its health check.
+
+See DEPLOYMENT.md for limits and the offline-only runtime contract.

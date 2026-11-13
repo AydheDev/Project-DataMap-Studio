@@ -5,9 +5,9 @@ Node 24.22.1, pnpm 11.25.0 and an installed Chrome browser.
 
 ## Results
 
-- **39 backend tests passed.**
-- **5 frontend interaction tests passed.**
-- **2 browser tests passed.**
+- **51 backend tests passed**, including the offline-only update.
+- **7 frontend tests passed**, including local API and redirect restrictions.
+- **2 browser tests passed before the offline-only update**; browser tests were not rerun after the preview permission was declined.
 - Python source compilation passed.
 - TypeScript checking and Vite production build passed.
 
@@ -38,3 +38,6 @@ No browser page errors were observed in the full workflow.
 - The optional interactive ChatGPT browser preview was declined. No visual screenshot review
   was completed through that browser. Automated Chrome workflow tests had already passed.
 - The application is a local, single-user release; no public/server deployment was attempted.
+
+Offline checks reject external/LAN connections and DNS before I/O, verify self-contained API documentation
+and browser response policy, and run the complete import/process/export workflow with the runtime guard active.

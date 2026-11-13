@@ -100,7 +100,7 @@ export default function Shell({
           </div>
           <div className="connection">
             <span className={connected ? 'online-dot' : 'offline-dot'} />
-            {connected ? 'Local server connected' : 'Server unavailable'}
+            {connected ? 'Local processor ready' : 'Local processor unavailable'}
             <span className="avatar">DM</span>
           </div>
         </header>

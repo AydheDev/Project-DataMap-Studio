@@ -1,6 +1,12 @@
 export async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+  if (!url.startsWith('/') || url.startsWith('//')) {
+    throw new Error('Use a local API path. External URLs are not supported.');
+  }
   const response = await fetch('/api' + url, {
     ...options,
+    mode: 'same-origin',
+    redirect: 'error',
+    credentials: 'same-origin',
     headers: {
       ...(options.body && !(options.body instanceof FormData)
         ? { 'Content-Type': 'application/json' }

@@ -15,7 +15,13 @@ then double-click **Setup.cmd** once. Setup installs Python dependencies into
 `.venv`, installs the locked frontend dependencies through pnpm, and builds the UI.
 Then use **Start.cmd**.
 
-Setup requires internet access. Normal workbook processing does not.
+The installed application works fully offline. Files, calculations, templates and history stay
+on this computer. The browser communicates only with the local processor at 127.0.0.1;
+there are no internet/LAN services, CDN assets, accounts, analytics or update checks.
+Runtime guards block non-loopback Python socket connections and DNS, and the built UI
+restricts connections and assets to its own local origin. API documentation is also local.
+
+Only first-time developer setup downloads dependencies. Start.cmd never downloads or installs anything.
 
 ## First workflow
 
@@ -83,10 +89,8 @@ Node is only needed to build, not to run the built application.
 Use `--port 8001` or `--no-browser` with `run_local.py` if needed.
 API reference: http://127.0.0.1:8000/docs.
 
-This first release is intentionally a **single-user, local deployment**.
-Do not expose it directly on a network. A server deployment requires authentication,
-TLS, per-user access controls, and a job worker design appropriate to that environment.
-See [deployment notes](docs/DEPLOYMENT.md).
+This is a **single-user, offline application**. LAN and internet hosting are outside its scope.
+The runtime rejects listening on non-loopback interfaces. See [local deployment notes](docs/DEPLOYMENT.md).
 
 ## Verification
 

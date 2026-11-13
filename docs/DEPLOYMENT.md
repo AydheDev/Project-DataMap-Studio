@@ -57,17 +57,24 @@ database and files together. Restore the directory as a unit.
 Source code, examples, lock files and docs are tracked in Git; storage, logs,
 virtual environments and built frontend output are ignored.
 
-## Future hosted deployment
+## Offline-only runtime boundary
 
-Before serving multiple people, add:
-- Authentication and per-user/organization authorization.
-- TLS, explicit approved origins and hostnames.
-- Secure retention policies, protected backups and appropriate encryption.
-- A process-independent worker/queue and crash recovery with ownership leases.
-- Database migrations and scalable result storage/pagination.
-- Server-side request rate limits and streaming multipart request caps.
-- Server resources and load testing sized to actual workbook volumes.
+No LAN or internet service is used by the application. The only HTTP communication is
+between the browser and the processor on this computer's loopback interface.
+The built UI has a same-origin Content Security Policy. Its API client rejects external
+URLs and redirects. The API reference is self-contained HTML and local OpenAPI JSON;
+Swagger/ReDoc CDN pages are disabled.
 
-Do not run several Uvicorn worker processes against this release's shared storage:
-its in-process queues and startup recovery assume a single process.
-These items are future infrastructure boundaries, not partially enabled features.
+A Python audit hook rejects non-loopback socket connects, binds, datagram destinations
+and hostname resolution. This applies to the normal launcher and API lifespan startup.
+It is an application guard for standard Python networking, not an OS sandbox for
+malicious native code or subprocesses. Only trusted feature modules are supported.
+No API calls or health checks are made to external services. The launcher waits for the
+local server's in-process readiness flag before opening the browser.
+
+First-time developer setup can download dependencies. Once installed, Start.cmd and
+all processing work without internet. There is no automatic update or telemetry mechanism.
+The guard does not change the user's browser or operating system networking settings.
+
+Public hosting, LAN sharing and multi-user server deployment are not supported.
+Do not run multiple Uvicorn workers against the shared local storage.

@@ -8,10 +8,12 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
 from .api.schemas import JobRequest, TemplateRequest, Settings
+from .api.local_docs import render_api_reference
+from .core.local_only import CONTENT_SECURITY_POLICY, install_local_only_network_policy
 from .core.jobs import JobManager
 from .core.logging import protect_access_logs
 from .modules import default_registry
@@ -31,11 +33,13 @@ def create_app(storage_root=None, registry=None):
 
     @asynccontextmanager
     async def lifespan(app):
+        install_local_only_network_policy()
         store.recover()
         yield
         manager.close()
 
-    app = FastAPI(title="DataMap Studio", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="DataMap Studio", version="1.0.0", lifespan=lifespan,
+                  docs_url=None, redoc_url=None, swagger_ui_oauth2_redirect_url=None)
     app.state.store, app.state.manager = store, manager
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
     app.add_middleware(CORSMiddleware, allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
@@ -56,6 +60,7 @@ def create_app(storage_root=None, registry=None):
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
         return response
 
     def upload_or_404(upload_id):
@@ -78,6 +83,10 @@ def create_app(storage_root=None, registry=None):
         if not target.is_file():
             raise HTTPException(410, "Report data is missing. Run the job again.")
         return json.loads(target.read_text(encoding="utf-8"))
+
+    @app.get("/docs", response_class=HTMLResponse, include_in_schema=False)
+    def local_api_reference():
+        return render_api_reference(app.openapi())
 
     @app.get("/api/health")
     def health():
