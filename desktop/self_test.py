@@ -50,6 +50,12 @@ def verify(app, window, resources, output):
     assert rows == [["UK", "Agent", 2]]
     destination = window.workspace.save_report(job["id"], output / "verified-report.xlsx")
     assert destination.is_file()
+    try:
+        window.workspace.save_report(job["id"], destination)
+    except FileExistsError:
+        pass
+    else:
+        raise AssertionError("Existing exports must not be overwritten.")
     payload = window.workspace.result(job["id"])
     assert len(payload["tables"]) == 7
     excluded = payload["tables"]["Excluded Records"]

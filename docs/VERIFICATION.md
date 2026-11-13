@@ -1,43 +1,40 @@
 # Verification record
 
-Verified locally on 13 November 2026 using Windows, Python 3.14.8,
-Node 24.22.1, pnpm 11.25.0 and an installed Chrome browser.
+## Native standalone Windows application
 
-## Results
+The Windows desktop workflow verifies the native source and packaged executable independently:
 
-- **51 backend tests passed**, including the offline-only update.
-- **7 frontend tests passed**, including local API and redirect restrictions.
-- **2 browser tests passed before the offline-only update**; browser tests were not rerun after the preview permission was declined.
-- Python source compilation passed.
-- TypeScript checking and Vite production build passed.
+1. Existing backend processing/API regression suite.
+2. Source native-window self-test using real synthetic XLSX files.
+3. PyInstaller one-file Windows executable build.
+4. The same native-window self-test launched from DataMapStudio.exe.
+5. Archive inspection excluding the web runtime.
+6. Native preview and machine-readable verification artifacts.
 
-Backend coverage includes login blanks/errors and real dates, incomplete date rejection,
-approved-role filtering, normalized email fallback, multi-role/cross-market preservation,
-composite deduplication, count reconciliation, zero counts, empty/all-excluded inputs,
-XLS/XLSX import, original row references, formula/error handling, formatted export,
-formula-safe cells, atomic failure behavior, complete upload-to-download jobs,
-reusable templates, persistent settings/history, restart recovery, missing inputs,
-corrupt files, size/expansion limits, Fed ID mapping rejection, source retention and private access logging.
+The native self-test checks all eight pages, header detection, manual field state,
+template saving, the real processing engine, report counts, role/market filtering,
+Excel export, audit email redaction, settings persistence and blocked IP socket creation.
+The sample result is four unique mappings and one removed duplicate.
+The exact workflow status and downloadable output are recorded in GitHub Actions.
 
-Frontend component tests exercise mapping completeness, duplicate/stale header rejection,
-worksheet changes, manual mapping, source previews, audit redaction defaults,
-server-side report filtering/sorting and request retry behavior.
+The first native build passed the backend suite, source workflow and packaged-executable workflow
+on Windows. Subsequent changes are verified by the same workflow before acceptance.
 
-Browser tests uploaded the real synthetic example files, confirmed detected headers,
-saved a template, generated and downloaded the report, filtered UK/Agent counts,
-checked excluded-record redaction, opened history and modules, and saved/reloaded settings.
-The mobile test checked navigation/import at 390 px width without page-level horizontal overflow.
-No browser page errors were observed in the full workflow.
+## Earlier web implementation
 
-## Limits of verification
+Before the desktop conversion:
+- 51 backend tests passed, including offline-operation checks.
+- 7 React frontend tests and the production build passed.
+- 2 browser tests passed before the local browser preview was declined.
 
-- Production business workbooks were not supplied; all processing tests used synthetic data.
-- Full-scale performance/load testing at the documented maximum limits was not performed.
-- A fresh-machine execution of Setup.cmd was not performed.
-- Linux/macOS execution was not tested.
-- The optional interactive ChatGPT browser preview was declined. No visual screenshot review
-  was completed through that browser. Automated Chrome workflow tests had already passed.
-- The application is a local, single-user release; no public/server deployment was attempted.
+The React/FastAPI interface is retained separately for reference.
+It is not used by the standalone executable.
 
-Offline checks reject external/LAN connections and DNS before I/O, verify self-contained API documentation
-and browser response policy, and run the complete import/process/export workflow with the runtime guard active.
+## Verification limits
+
+All workbooks used for testing were synthetic. Production business workbooks were not supplied.
+Full-scale performance testing at the maximum worksheet size has not been performed.
+The native application targets Windows x64; macOS/Linux distributions were not built.
+The user's Windows workspace disconnected during the conversion, so packaging and executable
+verification were performed on the repository's Windows runner. Installation on the user's
+disconnected PC has not been performed.

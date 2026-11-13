@@ -140,6 +140,8 @@ class Workspace:
         for record in self.store.list("uploads"):
             if record.get("original_path") and destination == Path(record["original_path"]):
                 raise ValueError("Choose a new filename so the original workbook is preserved.")
+        if destination.exists():
+            raise FileExistsError("A file already exists at that destination. Choose a new report filename.")
         temporary = destination.parent / f".datamap-{uuid4().hex}.tmp"
         try:
             shutil.copyfile(self.root / "outputs" / f"{job_id}.xlsx", temporary)

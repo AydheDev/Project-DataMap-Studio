@@ -70,7 +70,16 @@ Do not log source rows or full email addresses. User-facing validation errors sh
 describe the correction without embedding sensitive values. Avoid unbounded
 cross-products. Use the shared atomic exporter or maintain its atomic and text-safe guarantees.
 
-## Frontend
+## Native desktop interface
+
+Add feature-specific Qt widgets under `desktop/` and register the page in `desktop/window.py`.
+Use `desktop/workspace.py` for local file access and submit jobs directly to the shared
+JobManager with the new module ID. Keep module-specific transformations in the module's
+processor. Reuse the native InputCard, ConfigPanel and ReportView where their contracts fit.
+Do not add a browser, HTTP client, local web server, network socket, executable plugin upload,
+or any online dependency. Include source and packaged-executable tests for the new page.
+
+## Earlier web frontend (retained separately)
 
 The existing module metadata is fetched from `GET /api/modules`.
 Add your UI under `frontend/src/features/<module-id>/`, and wire its page entry in
