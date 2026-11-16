@@ -70,6 +70,34 @@ def verify(app, window, resources, output):
     window.settings_panel.controls["include_zero_counts"].setChecked(True)
     window.save_settings()
     wait_for(lambda: not window.tasks)
+    # Reproduce the former cell-limit rejection using a real wide XLSX.
+    # 10,001 rows x 201 headers exceeds 2,000,000 cells, but needs only five fields.
+    from openpyxl import Workbook
+    large_path = output / "wide-source.xlsx"
+    book = Workbook(write_only=True)
+    sheet = book.create_sheet("Wide export")
+    sheet.append(["Market", "FDS JobRole", "FDS Email", "EIP Email", "Salesforce Last login"]
+                 + [f"Unmapped {i}" for i in range(196)])
+    for index in range(10_001):
+        sheet.append(["UK", "Agent", "wide@example.com", None, 46000])
+    book.save(large_path)
+    book.close()
+    window.navigate(1)
+    window.cards["source"].import_path(large_path)
+    wait_for(lambda: window.cards["source"].ready() and not window.tasks)
+    window.navigate(2)
+    window.process()
+    assert window.active_job
+    large_job_id = window.active_job
+    wait_for(lambda: window.active_job is None, timeout=120)
+    large_job = window.workspace.store.get("jobs", large_job_id)
+    assert large_job["status"] == "succeeded", large_job.get("error")
+    assert large_job["metrics"]["source_rows"] == 10_001
+    assert large_job["metrics"]["unique_mappings"] == 1
+    assert large_job["metrics"]["duplicates_removed"] == 10_000
+    large_export = window.workspace.save_report(large_job_id, output / "wide-report.xlsx")
+    assert large_export.is_file()
+    wait_for(lambda: not window.tasks)
     for index in range(8):
         window.navigate(index)
         app.processEvents()
@@ -78,7 +106,9 @@ def verify(app, window, resources, output):
     window.grab().save(str(output / "native-window.png"))
     result = {"status": "passed", "pages": 8, "unique_mappings": 4,
               "duplicates_removed": 1, "report_sheets": 7,
-              "network_sockets": "blocked", "browser": False, "server": False}
+              "network_sockets": "blocked", "browser": False, "server": False,
+              "wide_workbook_rows": 10_001, "wide_workbook_columns": 201,
+              "wide_workbook_unique_mappings": 1}
     (output / "self-test.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     wait_for(lambda: not window.tasks)
     window.close()

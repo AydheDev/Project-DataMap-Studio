@@ -4,6 +4,7 @@ from .processor import process
 from ...services.export import write_workbook
 
 class AccountRoleMapping:
+    requires_full_source = False
     metadata = {
         "id": "account-role-mapping", "name": "Account Role Mapping", "version": "1.0.0",
         "description": "Approved account roles, unique accounts and auditable market reporting.",

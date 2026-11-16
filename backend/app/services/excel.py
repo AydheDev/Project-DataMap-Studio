@@ -1,4 +1,4 @@
-from itertools import islice, zip_longest
+from itertools import islice
 from pathlib import Path
 from zipfile import ZipFile, BadZipFile
 import pandas as pd
@@ -6,9 +6,10 @@ import openpyxl
 import xlrd
 from .normalization import ExcelFault, missing, public_value, text
 
-MAX_ROWS = 200_000
+MAX_ROWS = 1_000_000
 MAX_COLUMNS = 256
-MAX_CELLS = 2_000_000
+# Applies to retained processing columns, never to a streamed preview.
+MAX_CELLS = 8_000_000
 MAX_EXPANDED_BYTES = 200 * 1024 * 1024
 
 class WorkbookError(ValueError):
@@ -61,8 +62,6 @@ def _raw_rows(path, sheet):
         book = xlrd.open_workbook(path, on_demand=True)
         try:
             ws = book.sheet_by_name(sheet)
-            if ws.ncols > MAX_COLUMNS or ws.nrows > MAX_ROWS + 100:
-                raise WorkbookError("Worksheet exceeds the supported row or column limit.")
             for index in range(ws.nrows):
                 values = []
                 for cell in ws.row(index):
@@ -83,11 +82,11 @@ def _raw_rows(path, sheet):
         formulas_book = openpyxl.load_workbook(path, read_only=True, data_only=False, keep_links=False)
         try:
             ws, formula_ws = values_book[sheet], formulas_book[sheet]
-            if (ws.max_column or 0) > MAX_COLUMNS or (ws.max_row or 0) > MAX_ROWS + 100:
-                raise WorkbookError("Worksheet exceeds the supported row or column limit.")
+            # Exporters may report a used range inflated by formatting, or one
+            # smaller than the actual data. Read actual rows instead of trusting it.
+            ws.reset_dimensions()
+            formula_ws.reset_dimensions()
             for index, (cells, formulas) in enumerate(zip(ws.iter_rows(), formula_ws.iter_rows()), 1):
-                if index > MAX_ROWS + 100 or len(cells) > MAX_COLUMNS:
-                    raise WorkbookError("Worksheet exceeds the supported row or column limit.")
                 values = []
                 for cell, formula in zip(cells, formulas):
                     value = cell.value
@@ -103,7 +102,14 @@ def _raw_rows(path, sheet):
 
 def rows(path, sheet):
     try:
-        yield from _raw_rows(path, sheet)
+        for index, values in _raw_rows(path, sheet):
+            if index > 1_048_576:
+                raise WorkbookError("Worksheet contains rows outside the XLSX format limit.")
+            while values and missing(values[-1]):
+                values.pop()
+            if len(values) > MAX_COLUMNS:
+                raise WorkbookError(f"Worksheet contains data beyond column {MAX_COLUMNS:,}. Remove unused data columns.")
+            yield index, values
     except WorkbookError:
         raise
     except Exception as exc:
@@ -122,47 +128,83 @@ def detect_header(path, sheet):
         return sum(isinstance(v, str) for v in item[1]) + len(set(values))
     return max(candidates, key=score)[0]
 
-def read_sheet(path, sheet, header_row=None):
-    header_row = header_row or detect_header(path, sheet)
-    headers, records, references = None, [], []
-    width = 0
-    for index, values in rows(path, sheet):
-        if index < header_row:
-            continue
-        if index == header_row:
-            while values and missing(values[-1]):
-                values.pop()
-            if not values:
-                raise WorkbookError("Selected header row is empty.")
-            headers = []
-            used = set()
-            for i, v in enumerate(values, 1):
-                base = text(v) or f"Column {i}"
-                name, suffix = base, 2
-                while name in used:
-                    name, suffix = f"{base} ({suffix})", suffix + 1
-                headers.append(name)
-                used.add(name)
+def _sheet_records(path, sheet, header_row):
+    """Yield headers followed by validated rows without retaining the worksheet."""
+    headers = None
+    count = 0
+    stream = rows(path, sheet)
+    try:
+        for index, values in stream:
+            if index < header_row:
+                continue
+            if index == header_row:
+                if not values:
+                    raise WorkbookError("Selected header row is empty.")
+                headers, used = [], set()
+                for i, v in enumerate(values, 1):
+                    base = text(v) or f"Column {i}"
+                    name, suffix = base, 2
+                    while name in used:
+                        name, suffix = f"{base} ({suffix})", suffix + 1
+                    headers.append(name)
+                    used.add(name)
+                yield index, headers
+                continue
+            if headers is None or not values:
+                continue
             width = len(headers)
-            continue
-        if headers is None or all(missing(v) for v in values):
-            continue
-        if len(values) > width and any(not missing(v) for v in values[width:]):
-            raise WorkbookError("Data extends beyond the selected headers. Choose the correct header row.")
-        values = values[:width] + [None] * max(0, width-len(values))
-        records.append(values)
-        references.append(index)
-        if len(records) > MAX_ROWS or len(records) * width > MAX_CELLS:
-            raise WorkbookError("Selected sheet exceeds 200,000 rows or 2,000,000 cells. Split the workbook.")
-    if headers is None:
-        raise WorkbookError("Header row is outside this worksheet.")
-    frame = pd.DataFrame(records, columns=headers)
+            if len(values) > width:
+                raise WorkbookError("Data extends beyond the selected headers. Choose the correct header row.")
+            count += 1
+            if count > MAX_ROWS:
+                raise WorkbookError(f"Selected sheet exceeds {MAX_ROWS:,} non-empty data rows. Split it into smaller reporting periods.")
+            yield index, values + [None] * (width - len(values))
+        if headers is None:
+            raise WorkbookError("Header row is outside this worksheet.")
+    finally:
+        stream.close()
+
+
+def read_sheet(path, sheet, header_row=None, *, columns=None):
+    """Materialize only requested columns; preserve original source row numbers.
+
+    A row with content only in an unmapped column is still a source record and
+    must reach validation/auditing rather than being silently discarded.
+    """
+    header_row = header_row or detect_header(path, sheet)
+    stream = _sheet_records(path, sheet, header_row)
+    try:
+        _, headers = next(stream)
+        selected = list(headers if columns is None else dict.fromkeys(columns))
+        if any(name not in headers for name in selected):
+            raise WorkbookError("Mapped columns were not found. Review the selected sheet and header row.")
+        if not selected:
+            raise WorkbookError("Select at least one column to process.")
+        positions = [headers.index(name) for name in selected]
+        records, references = [], []
+        for index, values in stream:
+            if (len(records) + 1) * len(selected) > MAX_CELLS:
+                raise WorkbookError(f"Processing exceeds {MAX_CELLS:,} retained data cells across {len(selected):,} columns. Select fewer columns or split the reporting period.")
+            records.append([values[i] for i in positions])
+            references.append(index)
+    finally:
+        stream.close()
+    frame = pd.DataFrame(records, columns=selected)
     frame.index = pd.Index(references, name="Source Row")
     return frame, header_row
 
+
 def preview(path, sheet, header_row=None):
-    frame, detected = read_sheet(path, sheet, header_row)
-    return {"sheet": sheet, "header_row": detected, "columns": list(frame.columns),
-            "row_count": len(frame), "column_count": len(frame.columns),
-            "rows": [{"source_row": int(i), "values": [public_value(v) for v in row]}
-                     for i, row in frame.head(20).iterrows()]}
+    header_row = header_row or detect_header(path, sheet)
+    stream = _sheet_records(path, sheet, header_row)
+    try:
+        _, headers = next(stream)
+        sample, count = [], 0
+        for index, values in stream:
+            count += 1
+            if len(sample) < 20:
+                sample.append({"source_row": index, "values": [public_value(v) for v in values]})
+    finally:
+        stream.close()
+    return {"sheet": sheet, "header_row": header_row, "columns": headers,
+            "row_count": count, "column_count": len(headers), "rows": sample}

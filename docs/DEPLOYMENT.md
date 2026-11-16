@@ -20,8 +20,9 @@ replacing the executable does not delete the saved workspace.
 QLockFile prevents two native instances from using the same data directory concurrently.
 Do not open the same directory simultaneously with the earlier web prototype.
 
-Imports are capped at 30 MB. Worksheet limits remain 200,000 rows, 256 columns and
-2,000,000 data cells. XLSX expanded size is limited to 200 MB.
+Imports are capped at 30 MB. Worksheet limits are 1,000,000 non-empty data rows and 256 populated columns.
+Preview retains 20 sample rows while counting the full sheet. Processing is limited
+to 8,000,000 retained cells; Account Role Mapping retains only mapped columns. XLSX expanded size is limited to 200 MB.
 Excel formulas are not evaluated; saved cached values are used where available.
 
 ## No-network runtime
