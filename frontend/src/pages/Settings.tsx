@@ -49,9 +49,9 @@ export function Settings({
               <dt>Upload limit</dt>
               <dd>30 MB per workbook</dd>
               <dt>Sheet limit</dt>
-              <dd>200,000 rows / 256 columns</dd>
+              <dd>1,000,000 data rows / 256 columns</dd>
               <dt>Cell limit</dt>
-              <dd>2,000,000 per sheet</dd>
+              <dd>8,000,000 retained for processing</dd>
               <dt>Concurrent jobs</dt>
               <dd>2 running / 2 queued</dd>
             </dl>

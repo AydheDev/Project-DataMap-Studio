@@ -64,7 +64,10 @@ class MyModule:
 
 Module inputs are DataFrames keyed by the declared input IDs. Their indexes carry
 original Excel row numbers. Required fields use canonical keys; the entire source
-frame remains available in `frame.attrs["source_frame"]`.
+frame remains available in `frame.attrs["source_frame"]` by default. Set the module
+class attribute `requires_full_source = False` when only mapped fields are needed.
+In that mode the reader retains only mapped columns, and `source_frame` is omitted.
+Source row numbers and rows containing only unmapped data are preserved for validation/audit.
 
 Do not log source rows or full email addresses. User-facing validation errors should
 describe the correction without embedding sensitive values. Avoid unbounded

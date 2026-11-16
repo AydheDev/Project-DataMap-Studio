@@ -60,7 +60,9 @@ Two worker threads run jobs, with at most four running/queued jobs combined.
 Additional submissions receive HTTP 429.
 
 Workers read selected inputs and preserve source row indices. Each module receives
-mapped fields plus the full source DataFrame on `frame.attrs["source_frame"]`.
+mapped fields plus the full source DataFrame on `frame.attrs["source_frame"]` by default.
+A module can set `requires_full_source = False` to retain only mapped columns; that
+mode omits `source_frame`. Account Role Mapping uses this mode.
 Modules choose how to validate, process and export the inputs.
 
 A report is written to a randomly named temporary file and atomically renamed only
@@ -81,7 +83,9 @@ and startup recovery; this release does not support that topology.
 - XLSX sheets are streamed with OpenPyXL read-only mode. A parallel formula view
   distinguishes formula cells lacking cached values from ordinary blanks.
 - Excel errors use typed `ExcelFault` values. Formulas are never evaluated.
-- Selected sheets are materialized into bounded Pandas DataFrames for transformations.
+- Preview streams validated rows, counts all non-empty source records and retains only 20 samples.
+- Inaccurate XLSX dimension metadata and trailing formatting do not determine data size.
+- Only the columns required by each module are materialized into bounded Pandas DataFrames for transformations.
   Processing is not an unlimited-memory streaming aggregation engine.
 - Role comparison collapses repeated whitespace and ignores case. Canonical output
   uses the first approved spelling. Market whitespace is collapsed; market case is preserved.

@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         self.timer.setInterval(500)
         self.timer.timeout.connect(self.poll_job)
         self.timer.start()
-        self.statusBar().showMessage("Desktop 1.1.0 · Local data: " + str(workspace.root))
+        self.statusBar().showMessage("Desktop 1.1.1 · Local data: " + str(workspace.root))
 
     def add_page(self, title, description, widget, scroll=True):
         page = QWidget()

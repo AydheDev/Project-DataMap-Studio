@@ -47,14 +47,18 @@ class JobManager:
                 if upload is None:
                     raise ValueError("An input upload no longer exists. Upload it again.")
                 path = self.store.root / "uploads" / upload["stored_name"]
-                frame, _ = read_sheet(path, selection["sheet"], selection["header_row"])
                 mapping = selection["mapping"]
+                full_source = getattr(module, "requires_full_source", True)
+                frame, _ = read_sheet(path, selection["sheet"], selection["header_row"],
+                                      columns=None if full_source else mapping.values())
                 missing = [key for key in mapping.values() if key not in frame.columns]
                 if missing:
                     raise ValueError("Mapped columns were not found. Review the selected sheet and header row.")
-                # Preserve the entire original frame on attrs for future modules.
+                # Modules retain full-source access by default; mapped-only modules
+                # explicitly opt out to avoid retaining unrelated workbook data.
                 mapped = pd.DataFrame({key: frame[column] for key, column in mapping.items()}, index=frame.index)
-                mapped.attrs["source_frame"] = frame
+                if full_source:
+                    mapped.attrs["source_frame"] = frame
                 mapped.attrs["sheet"] = selection["sheet"]
                 inputs[definition["id"]] = mapped
             module.validate(inputs, config)

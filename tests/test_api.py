@@ -92,3 +92,19 @@ def test_restart_persistence_and_recovery(tmp_path):
     with TestClient(create_app(root)) as client:
         assert client.get("/api/jobs/interrupted").json()["status"] == "failed"
         assert client.get("/api/settings").json()["include_zero_counts"] is False
+
+
+def test_job_ignores_unmapped_columns_in_memory_budget(client, workbooks, monkeypatch):
+    # Six source columns exceed this budget; the five mapped fields fit exactly.
+    monkeypatch.setattr('app.services.excel.MAX_CELLS', 80)
+    source, roles = [upload(client, file) for file in workbooks]
+    response = client.get(f'/api/uploads/{source["id"]}/preview', params={"sheet": "New reporting period"})
+    assert response.status_code == 200
+    assert response.json()['row_count'] == 16
+    response = client.post('/api/jobs', json=request_for(source, roles))
+    assert response.status_code == 202
+    job = wait(client, response.json()['id'])
+    assert job['status'] == 'succeeded', job
+    assert job['metrics']['source_rows'] == 16
+    assert job['metrics']['unique_mappings'] == 4
+    assert job['metrics']['excluded_rows'] == 11

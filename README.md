@@ -13,6 +13,9 @@ The executable bundles the processing engine and native Qt interface.
 The application does not have telemetry, cloud storage, sign-in or automatic updates.
 Keep the included user guide and third-party licence notices with the distribution.
 
+Version **1.1.1** fixes large-workbook imports: previews retain only sample rows,
+processing retains mapped columns, and up to 1,000,000 non-empty source rows are supported.
+
 ## First workflow
 
 1. Open **Data Import**.

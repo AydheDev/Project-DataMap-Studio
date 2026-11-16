@@ -38,5 +38,6 @@ The application does not use a browser, localhost server, network socket, cloud 
 Network shares and mapped network drives are not supported.
 If a job is running, wait for it to finish before closing the app.
 
-Limits: XLSX/XLS, 30 MB per file, 200,000 rows, 256 columns, 2,000,000 cells per selected sheet.
+Limits: XLSX/XLS, 30 MB per file, 1,000,000 non-empty data rows and 256 populated columns per selected sheet.
+Previews scan the sheet while retaining only 20 sample rows. Account Role Mapping retains only the five mapped source fields and the approved-role field; unrelated columns do not consume its processing cell budget. The retained-data budget is 8,000,000 cells. XLSX expanded size is limited to 200 MB.
 Formula cells without saved cached values are excluded; recalculate and save in Excel before importing.
